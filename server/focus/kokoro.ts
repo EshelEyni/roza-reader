@@ -27,14 +27,17 @@ interface Job {
 }
 
 // The packaged app starts with a bare PATH; Homebrew holds espeak-ng.
-const ENV = { ...process.env, PATH: [process.env.PATH ?? '', '/opt/homebrew/bin', '/usr/local/bin'].join(path.delimiter), PYTHONUNBUFFERED: '1' };
+const ENV = { ...process.env, PATH: [process.env.PATH ?? '', '/opt/homebrew/bin', '/usr/local/bin'].join(path.delimiter), PYTHONUNBUFFERED: '1', PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' };
 
 /**
  * Runs kokoro/service.py as one long-lived process and feeds it one sentence at a time,
  * so a sentence the listener is waiting for can jump ahead of read-ahead and exports.
  */
 export function createKokoro(kokoroDir: string) {
-  const python = path.join(kokoroDir, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python');
+  const pythonFolder = process.platform === 'win32' ? 'Scripts' : 'bin';
+  const pythonName = process.platform === 'win32' ? 'python.exe' : 'python';
+  const venvPython = path.join(kokoroDir, '.venv', pythonFolder, pythonName);
+  const python = existsSync(venvPython) ? venvPython : path.join(kokoroDir, pythonFolder, pythonName);
   const script = path.join(kokoroDir, 'service.py');
   const queues: Record<Priority, Job[]> = { high: [], low: [] };
   let child: ChildProcessWithoutNullStreams | null = null;
@@ -64,12 +67,15 @@ export function createKokoro(kokoroDir: string) {
   const start = () => {
     if (child) return;
     if (!isInstalled()) {
-      status = { state: 'missing', message: 'Kokoro is not installed. Run kokoro/setup.sh in the project folder.' };
+      const setup = process.platform === 'win32'
+        ? 'Run powershell -File kokoro/setup.ps1. For the packaged app, add -RuntimeDir "$env:APPDATA\\RozaReader\\kokoro".'
+        : 'Run sh kokoro/setup.sh in the project folder.';
+      status = { state: 'missing', message: `The speech engine is not installed. ${setup}` };
       return;
     }
     status = { state: 'loading', message: 'Loading the Kokoro voice model…' };
     recentErrors = [];
-    const process_ = spawn(python, [script], { env: ENV, cwd: kokoroDir });
+    const process_ = spawn(python, [script], { env: { ...ENV, VIRTUAL_ENV: path.dirname(path.dirname(python)) }, cwd: kokoroDir });
     child = process_;
 
     createInterface({ input: process_.stdout }).on('line', (line) => {

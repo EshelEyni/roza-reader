@@ -23,12 +23,14 @@ Development data lives in data/focus/. Packaged apps store data in Electron's pe
 
 ## Speech and audio export
 
-Kokoro requires Python 3.10–3.12, espeak-ng, and ffmpeg (for exports). On macOS run sh kokoro/setup.sh. On Windows install Python 3.11, espeak-ng and ffmpeg on PATH, then run powershell -File kokoro/setup.ps1. The voice model (~330 MB) downloads on first use.
+Kokoro requires Python 3.10–3.12. On macOS run `sh kokoro/setup.sh`. On Windows install uv or Python 3.11, then run `powershell -File kokoro/setup.ps1`. The Windows Python packages include eSpeak. The English language model is installed during setup; the voice model (~330 MB) downloads on first use. Audio export requires ffmpeg on PATH.
 
-The Python environment is installed separately and is not bundled in desktop packages. For packaged apps set ROZA_READER_KOKORO_DIR to the absolute path of a configured kokoro folder containing service.py and .venv.
+The Python environment is installed separately and is not bundled in desktop packages. For the packaged Windows app run `powershell -File kokoro/setup.ps1 -RuntimeDir "$env:APPDATA\RozaReader\kokoro"`. RozaReader automatically finds this per-user runtime on subsequent launches. `ROZA_READER_KOKORO_DIR` can override the runtime directory, which contains service.py and a Python environment.
 
 Internal focus API paths and data format are retained for compatibility with existing libraries. To migrate a library, copy the original data/focus folder into this project's data directory before starting.
 
 ## Validation
 
 Run `npm run typecheck`, `npm run build`, and `npm run test:smoke`. The smoke test uses a temporary library and checks the reader page, bundled icons, API isolation, settings persistence, EPUB validation, desktop picker integration, and engine status without downloading voice models.
+
+After installing the speech runtime, `npm run test:speech` verifies real narration, word timings, and audio output to a Unicode filesystem path.

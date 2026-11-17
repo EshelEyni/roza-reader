@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, shell } from 'electron';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { startFocusServer } from '../server/focus/server';
 import { DEFAULT_THEME, themeById } from '../shared/themes';
@@ -9,7 +9,10 @@ const DEV_URL = process.env.ELECTRON_DEV_URL;
 const DEV_SERVER_PORT = 3002;
 const APP_DIR = path.join(__dirname, '..');
 const DATA_DIR = process.env.ROZA_READER_DATA_DIR ?? (app.isPackaged ? app.getPath('userData') : path.join(APP_DIR, 'data'));
-const KOKORO_DIR = app.isPackaged ? path.join(process.resourcesPath, 'kokoro') : path.join(APP_DIR, 'kokoro');
+const USER_KOKORO_DIR = path.join(app.getPath('userData'), 'kokoro');
+const KOKORO_DIR = app.isPackaged
+  ? (existsSync(path.join(USER_KOKORO_DIR, 'service.py')) ? USER_KOKORO_DIR : path.join(process.resourcesPath, 'kokoro'))
+  : path.join(APP_DIR, 'kokoro');
 process.env.ROZA_READER_KOKORO_DIR ??= KOKORO_DIR;
 
 // Matches the window to the saved theme so it doesn't flash a different color before the page paints.

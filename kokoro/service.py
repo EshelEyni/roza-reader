@@ -9,12 +9,30 @@ The first line it prints is {"event": "ready"} once the model is loaded. Logs go
 import json
 import sys
 import warnings
+import ctypes
 
 warnings.filterwarnings("ignore")
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 from kokoro import KModel, KPipeline  # noqa: E402
+
+# eSpeak's Windows C API reads narrow filesystem paths. phonemizer resolves
+# paths back to their Unicode form; convert at the C API boundary so Windows
+# usernames containing non-ASCII characters still work.
+if sys.platform == "win32":
+    from phonemizer.backend.espeak.api import EspeakAPI
+
+    _espeak_init = EspeakAPI.__init__
+
+    def _windows_espeak_init(self, library, data_path):
+        if data_path is not None:
+            short = ctypes.create_unicode_buffer(32768)
+            if ctypes.windll.kernel32.GetShortPathNameW(str(data_path), short, len(short)):
+                data_path = short.value
+        _espeak_init(self, library, data_path)
+
+    EspeakAPI.__init__ = _windows_espeak_init
 
 REPO_ID = "hexgrad/Kokoro-82M"
 SAMPLE_RATE = 24000
