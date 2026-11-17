@@ -32,7 +32,7 @@ function createWindow(url: string) {
     minWidth: 560,
     minHeight: 480,
     title: 'RozaReader',
-    icon: path.join(APP_DIR, 'assets', 'icon.png'),
+    icon: path.join(APP_DIR, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     backgroundColor: savedThemeBackground(),
   });
 

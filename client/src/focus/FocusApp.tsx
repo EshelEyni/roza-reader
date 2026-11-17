@@ -78,7 +78,7 @@ export default function FocusApp() {
         <header className="header">
           <NavLink to="/" className="brand">
             <span className="brand-icon">
-              <img src="/images/icon-192x192.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src="/images/icon-192x192.png?v=reader-dog" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </span>{' '}
             RozaReader
           </NavLink>
