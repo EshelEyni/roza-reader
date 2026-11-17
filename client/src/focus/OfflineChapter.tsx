@@ -31,6 +31,7 @@ export default function OfflineChapter(props: Props) {
         if (cancelled) return;
         setStatus(next);
         setError(null);
+        if (next.state !== 'downloading') return;
       } catch (failure) {
         if (!cancelled) setError((failure as Error).message);
       }
@@ -38,7 +39,7 @@ export default function OfflineChapter(props: Props) {
     };
     poll();
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [bookId, chapter, voice.id]);
+  }, [bookId, chapter, voice.id, isOpen, status?.state]);
 
   const act = async (method: 'POST' | 'DELETE') => {
     setBusy(true);

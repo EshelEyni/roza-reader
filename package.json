@@ -17,7 +17,8 @@
     "package": "npm run build && npm run build:electron && electron-builder --dir",
     "test:smoke": "tsx scripts/smoke.ts",
     "test:speech": "tsx scripts/speech-smoke.ts",
-    "test:offline": "tsx scripts/offline-smoke.ts"
+    "test:offline": "tsx scripts/offline-smoke.ts",
+    "test:reader": "tsx scripts/reader-smoke.ts"
   },
   "build": {
     "appId": "com.roza.reader",
@@ -71,8 +72,12 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^5.4.21",
-    "wait-on": "^9.5.1"
+    "wait-on": "^9.5.1",
+    "playwright-core": "^1.65.1"
   },
   "description": "RozaReader EPUB reader with Kokoro narration and audiobook export",
-  "author": "EshelEyni"
+  "author": "EshelEyni",
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.14.26"
+  }
 }

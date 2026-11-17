@@ -11,27 +11,7 @@ import Player from './Player';
 import { useDismiss } from './usePopover';
 import VoiceDialog from './VoiceDialog';
 import OfflineChapter from './OfflineChapter';
-
-// The spoken sentence may sit anywhere in this band of the view before the page scrolls;
-// then it moves to about a third from the top, so the page moves rarely and calmly.
-const COMFORT_TOP = 0.15;
-const COMFORT_BOTTOM = 0.7;
-const SCROLL_TARGET = 0.3;
-// After the reader scrolls by hand, following waits this long.
-const MANUAL_SCROLL_PAUSE = 4000;
-
-function keepInView(container: HTMLElement, target: Element) {
-  // On narrow windows the whole page scrolls instead of the reader.
-  const isContainerScrolling = getComputedStyle(container).overflowY !== 'visible';
-  const view = isContainerScrolling ? container.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
-  const height = view.bottom - view.top;
-  const rect = target.getBoundingClientRect();
-  const isComfortable = rect.top >= view.top + height * COMFORT_TOP && rect.bottom <= view.top + height * COMFORT_BOTTOM;
-  if (isComfortable) return;
-  const top = rect.top - (view.top + height * SCROLL_TARGET);
-  const scroller = isContainerScrolling ? container : window;
-  scroller.scrollBy({ top, behavior: 'smooth' });
-}
+import VirtualText from './VirtualText';
 
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
@@ -56,7 +36,6 @@ function ReaderView({ book }: { book: FocusBook }) {
   const [isContentsOpen, setIsContentsOpen] = useState(false);
   const contentsRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const followPausedUntil = useRef(0);
 
   const chapter = book.chapters[chapterIndex];
   const script = useMemo(() => scriptOf(chapter), [chapter]);
@@ -64,38 +43,6 @@ function ReaderView({ book }: { book: FocusBook }) {
   const isLastChapter = chapterIndex === book.chapters.length - 1;
 
   useDismiss(isContentsOpen, () => setIsContentsOpen(false), contentsRef);
-
-  // A new chapter starts at the top of the page; on narrow windows the page itself scrolls.
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0 });
-    scrollRef.current?.querySelector('h1')?.scrollIntoView({ block: 'nearest' });
-  }, [chapterIndex]);
-
-  // Opening a book shows where reading stopped.
-  useEffect(() => {
-    const sentence = scrollRef.current?.querySelector(`[data-sentence="${narration.sentenceIndex}"]`);
-    if (narration.wordIndex > 0) sentence?.scrollIntoView({ block: 'center' });
-  }, []);
-
-  // Scrolling by hand pauses the following for a moment.
-  useEffect(() => {
-    const pause = () => (followPausedUntil.current = Date.now() + MANUAL_SCROLL_PAUSE);
-    window.addEventListener('wheel', pause, { passive: true });
-    window.addEventListener('touchmove', pause, { passive: true });
-    return () => {
-      window.removeEventListener('wheel', pause);
-      window.removeEventListener('touchmove', pause);
-    };
-  }, []);
-
-  // While playing, the spoken sentence stays in view.
-  useEffect(() => {
-    const container = scrollRef.current;
-    const isFollowPaused = Date.now() < followPausedUntil.current;
-    if (!narration.isPlaying || isFollowPaused || !container) return;
-    const sentence = container.querySelector(`[data-sentence="${narration.sentenceIndex}"]`);
-    if (sentence) keepInView(container, sentence);
-  }, [narration.isPlaying, narration.sentenceIndex]);
 
   const fontIndex = Math.max(FONT_SIZES.indexOf(settings.fontSize ?? DEFAULT_FONT_SIZE), 0);
   const changeFontSize = (step: number) => {
@@ -200,34 +147,9 @@ function ReaderView({ book }: { book: FocusBook }) {
           </p>
           <h1>{chapter.title}</h1>
 
-          {script.paragraphs.map((sentences, paragraphIndex) => (
-            <p key={paragraphIndex}>
-              {sentences.map((sentence) => {
-                const isCurrent = sentence.index === narration.sentenceIndex;
-                const lastWord = sentence.words[sentence.words.length - 1];
-                return (
-                  <span key={sentence.index}>
-                    <span
-                      data-sentence={sentence.index}
-                      className={`focus-sentence ${isCurrent ? 'current' : ''}`}
-                      title="Read from here"
-                      onClick={() => narration.jumpTo(sentence.words[0].index)}
-                    >
-                      {sentence.words.map((word) => (
-                        <span key={word.index}>
-                          <span className={isCurrent && word.index === narration.wordIndex ? 'focus-word current' : undefined}>
-                            {word.text}
-                          </span>
-                          {word !== lastWord && word.space}
-                        </span>
-                      ))}
-                    </span>
-                    {lastWord?.space}
-                  </span>
-                );
-              })}
-            </p>
-          ))}
+          <VirtualText key={chapterIndex} script={script} scrollRef={scrollRef}
+            sentence={narration.sentenceIndex} word={narration.wordIndex} playing={narration.isPlaying}
+            fontSize={FONT_SIZES[fontIndex]} jump={narration.jumpTo} />
 
           <nav className="focus-chapter-nav">
             <button type="button" onClick={() => goToChapter(chapterIndex - 1)} disabled={isFirstChapter}>

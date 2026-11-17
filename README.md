@@ -42,3 +42,5 @@ Run `npm run typecheck`, `npm run build`, and `npm run test:smoke`. The smoke te
 After installing the speech runtime, `npm run test:speech` verifies real narration, word timings, and audio output to a Unicode filesystem path.
 
 `npm run test:offline` checks real chapter downloads and verifies cached playback with timings after restarting the server with the speech runtime unavailable. It also checks stop/resume, voice isolation, input validation, and missing audio detection.
+
+`npm run test:reader` uses installed Chrome (or `CHROME_PATH`) to check a 2,000-paragraph chapter: bounded DOM size, scroll window rotation, saved-position restore, distant seeking, resizing, and preloaded sentence handoff. The reader keeps about 100 paragraphs mounted and creates per-word elements only for the active sentence. Browser find and text selection therefore apply to the currently mounted portion of a chapter.

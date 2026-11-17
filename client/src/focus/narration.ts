@@ -85,19 +85,27 @@ export function useNarration({ bookId, chapter, script, voice, speed, initialWor
   const currentKey = keyOf(chapter, sentenceIndex);
 
   // Event handlers read the latest values through this ref.
-  const latest = useRef({ bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, active });
-  latest.current = { bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, active };
+  const latest = useRef({ bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, active, voice });
+  latest.current = { bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, active, voice };
+  const startRef = useRef<(item: Prepared, key: string, chapter: number, sentence: number, word: number) => Promise<void>>(async () => {});
 
   /** Makes the sentence (or takes it from the cache) and loads it into its own audio element. */
   const prepare = (chapterIndex: number, index: number, priority: 'high' | 'low') => {
     const key = keyOf(chapterIndex, index);
     const existing = prepared.current.get(key);
     if (existing) return existing;
-    const promise = fetchSentenceAudio(bookId, chapterIndex, index, voice, priority).then((clip) => {
+    const promise = fetchSentenceAudio(bookId, chapterIndex, index, voice, priority).then(async (clip) => {
       const element = new Audio();
       element.preload = 'auto';
-      element.src = clip.url;
-      element.load();
+      // Read-ahead must include loading the media, not just its timing JSON.
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => { window.clearTimeout(timeout); element.oncanplay = null; element.onerror = null; };
+        const timeout = window.setTimeout(() => { cleanup(); reject(new Error('Audio loading timed out. Try Play again.')); }, 30000);
+        element.oncanplay = () => { cleanup(); resolve(); };
+        element.onerror = () => { cleanup(); reject(new Error('Could not load sentence audio. Try Play again.')); };
+        element.src = clip.url;
+        element.load();
+      });
       const item = { element, clip };
       ready.current.set(key, item);
       return item;
@@ -119,16 +127,27 @@ export function useNarration({ bookId, chapter, script, voice, speed, initialWor
 
   // At the end of a sentence the next one follows, or the next chapter.
   const handleEnded = () => {
-    const { bookId: currentBook, script: current, sentenceIndex: index, onEnd: end, chapter: currentChapter } = latest.current;
+    const { bookId: currentBook, script: current, sentenceIndex: index, onEnd: end, chapter: currentChapter, voice: currentVoice } = latest.current;
     const next = current.sentences[index + 1];
-    if (next) return setPosition({ bookId: currentBook, chapter: currentChapter, word: next.words[0].index });
+    if (next) {
+      const word = next.words[0].index;
+      const key = `${currentBook}/${currentVoice}/${currentChapter}-${next.index}`;
+      const loaded = ready.current.get(key);
+      // Start preloaded audio directly in the ended event. A React render and
+      // scrolling/highlighting no longer sit between two spoken sentences.
+      if (loaded) startRef.current(loaded, key, currentChapter, next.index, word).catch((failure: Error) => {
+        setError(failure.message); setIsPlaying(false);
+      });
+      setPosition({ bookId: currentBook, chapter: currentChapter, word });
+      return;
+    }
     const keepsPlaying = end();
     if (!keepsPlaying) setIsPlaying(false);
   };
   const handleEndedRef = useRef(handleEnded);
   handleEndedRef.current = handleEnded;
 
-  const start = (item: Prepared, key: string, chapterIndex: number, index: number) => {
+  const start = (item: Prepared, key: string, chapterIndex: number, index: number, word = latest.current.wordIndex) => {
     const previous = latest.current.active;
     if (previous && previous.element !== item.element) previous.element.pause();
     const { element, clip } = item;
@@ -136,11 +155,14 @@ export function useNarration({ bookId, chapter, script, voice, speed, initialWor
     element.defaultPlaybackRate = latest.current.speed;
     element.playbackRate = latest.current.speed;
     // Starting mid-sentence (after a seek) starts at that word.
-    const offset = latest.current.wordIndex - script.sentences[index].words[0].index;
+    const offset = word - latest.current.script.sentences[index].words[0].index;
     element.currentTime = offset > 0 ? (clip.words[offset]?.start ?? 0) : 0;
-    setActive({ key, chapter: chapterIndex, sentence: index, element, clip });
+    const nextActive = { key, chapter: chapterIndex, sentence: index, element, clip };
+    latest.current.active = nextActive;
+    setActive(nextActive);
     return element.play();
   };
+  startRef.current = start;
 
   useEffect(() => {
     const element = active?.element;
