@@ -1,4 +1,5 @@
 import type {
+  ChapterDownload,
   EngineStatus,
   ExportJob,
   ExportRequest,
@@ -9,6 +10,9 @@ import type {
   SentenceAudio,
 } from '../../../shared/focus';
 import { RequestError, request } from '../api';
+
+export const chapterDownload = (bookId: string, chapter: number, voice: string, method: 'GET' | 'POST' | 'DELETE' = 'GET') =>
+  request<ChapterDownload>(`/api/focus/books/${bookId}/chapters/${chapter}/download?voice=${encodeURIComponent(voice)}`, { method });
 
 export const fetchFocusLibrary = () => request<{ books: FocusBookSummary[]; settings: FocusSettings }>('/api/focus/library');
 

@@ -23,6 +23,12 @@ Development data lives in data/focus/. Packaged apps store data in Electron's pe
 
 ## Speech and audio export
 
+### Offline chapters with word tracking
+
+Open a chapter, choose **Save offline**, then **Download chapter**. RozaReader saves the selected voice’s audio and word timings and shows progress. Keep the app open until it says **Offline ready**; you can close the dialog or read while it saves. **Stop saving** keeps completed sentences, and **Resume download** picks up from that progress, including after restarting the app.
+
+Once ready, use **Play with word tracking** or the normal Play button. Highlighting, seeking, and playback speed work from the saved chapter without internet access or speech generation. Each voice needs its own download. The download icon in the player still exports audio for other apps.
+
 Kokoro requires Python 3.10–3.12. On macOS run `sh kokoro/setup.sh`. On Windows install uv or Python 3.11, then run `powershell -File kokoro/setup.ps1`. The Windows Python packages include eSpeak. The English language model is installed during setup; the voice model (~330 MB) downloads on first use. Audio export requires ffmpeg on PATH.
 
 The Python environment is installed separately and is not bundled in desktop packages. For the packaged Windows app run `powershell -File kokoro/setup.ps1 -RuntimeDir "$env:APPDATA\RozaReader\kokoro"`. RozaReader automatically finds this per-user runtime on subsequent launches. `ROZA_READER_KOKORO_DIR` can override the runtime directory, which contains service.py and a Python environment.
@@ -34,3 +40,5 @@ Internal focus API paths and data format are retained for compatibility with exi
 Run `npm run typecheck`, `npm run build`, and `npm run test:smoke`. The smoke test uses a temporary library and checks the reader page, bundled icons, API isolation, settings persistence, EPUB validation, desktop picker integration, and engine status without downloading voice models.
 
 After installing the speech runtime, `npm run test:speech` verifies real narration, word timings, and audio output to a Unicode filesystem path.
+
+`npm run test:offline` checks real chapter downloads and verifies cached playback with timings after restarting the server with the speech runtime unavailable. It also checks stop/resume, voice isolation, input validation, and missing audio detection.

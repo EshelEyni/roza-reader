@@ -16,7 +16,8 @@
     "electron": "npm run build && npm run build:electron && electron .",
     "package": "npm run build && npm run build:electron && electron-builder --dir",
     "test:smoke": "tsx scripts/smoke.ts",
-    "test:speech": "tsx scripts/speech-smoke.ts"
+    "test:speech": "tsx scripts/speech-smoke.ts",
+    "test:offline": "tsx scripts/offline-smoke.ts"
   },
   "build": {
     "appId": "com.roza.reader",

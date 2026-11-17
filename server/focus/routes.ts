@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import express, { type Express } from 'express';
@@ -26,6 +26,7 @@ import { route } from '../route';
 import { EpubError, parseEpub } from './epub';
 import { createExporter, expandHome } from './exporter';
 import { createKokoro, type Priority } from './kokoro';
+import { createChapterDownloads } from './downloads';
 
 const run = promisify(execFile);
 
@@ -67,6 +68,7 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
   const library = createJsonStore<FocusLibrary>(path.join(focusDir, 'library.json'), { books: [], settings: DEFAULT_SETTINGS });
   const kokoro = createKokoro(process.env.ROZA_READER_KOKORO_DIR ?? path.resolve(dataDir, '..', 'kokoro'));
   const exporter = createExporter(path.join(focusDir, 'exports'));
+  const downloads = createChapterDownloads();
   // A sentence is made once even when playback, read-ahead and an export ask for it together.
   const inFlight = new Map<string, Promise<SentenceAudio>>();
   const chapterCache = new Map<string, FocusChapter[]>();
@@ -105,6 +107,20 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
     return summary ? { ...summary, chapters: await loadChapters(summary.id) } : null;
   };
 
+  const cachedSentence = async (bookId: string, voice: string, chapter: number, sentence: number): Promise<SentenceAudio | null> => {
+    await clearOldAudio;
+    const key = `${bookId}/${voice}/${chapter}-${sentence}`;
+    try {
+      const timing = JSON.parse(await readFile(path.join(audioDir, `${key}.json`), 'utf8'));
+      const size = (await stat(path.join(audioDir, `${key}.wav`))).size;
+      const expected = scriptOf((await loadChapters(bookId))[chapter]).sentences[sentence]?.words.length;
+      const valid = size > 44 && Number.isFinite(timing.duration) && timing.duration > 0 && Array.isArray(timing.words)
+        && timing.words.length === expected && timing.words.every((word: { start: number; end: number }) =>
+          word && Number.isFinite(word.start) && Number.isFinite(word.end) && word.start >= 0 && word.end >= word.start);
+      return valid ? { url: `/api/focus/audio/${key}.wav`, ...timing } : null;
+    } catch { return null; }
+  };
+
   /** Speaks one sentence (or returns it from the cache) and gives its file, length and word times. */
   const ensureSentence = async (bookId: string, voice: string, chapterIndex: number, sentenceIndex: number, priority: Priority) => {
     await clearOldAudio;
@@ -114,10 +130,8 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
     const timingFile = path.join(folder, `${chapterIndex}-${sentenceIndex}.json`);
     const url = `/api/focus/audio/${key}.wav`;
 
-    if (existsSync(timingFile) && existsSync(wavFile)) {
-      const timing = JSON.parse(await readFile(timingFile, 'utf8'));
-      return { file: wavFile, audio: { url, ...timing } as SentenceAudio };
-    }
+    const cached = await cachedSentence(bookId, voice, chapterIndex, sentenceIndex);
+    if (cached) return { file: wavFile, audio: cached };
 
     const pending = inFlight.get(key);
     if (pending) return { file: wavFile, audio: await pending };
@@ -217,6 +231,7 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
   app.delete('/api/focus/books/:id', route(async (req, res) => {
     const { id } = req.params;
     if (!ID_PATTERN.test(id)) return res.status(404).end();
+    await downloads.stopBook(id);
     await updateLibrary((current) => ({ next: { ...current, books: current.books.filter((book) => book.id !== id) }, result: null }));
     chapterCache.delete(id);
     await rm(bookDir(id), { recursive: true, force: true });
@@ -269,6 +284,25 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
   app.get('/api/focus/engine', (_req, res) => {
     res.json(kokoro.status());
   });
+
+  for (const method of ['get', 'post', 'delete'] as const) {
+    app[method]('/api/focus/books/:id/chapters/:chapter/download', route(async (req, res) => {
+      const chapter = Number(req.params.chapter);
+      const voice = String(req.query.voice ?? '');
+      if (!ID_PATTERN.test(req.params.id) || !Number.isInteger(chapter) || chapter < 0 || !isVoiceId(voice)) {
+        return res.status(400).json({ error: 'Send a valid chapter and voice' });
+      }
+      const book = await loadBook(req.params.id);
+      if (!book) return res.status(404).json({ error: 'Book not found' });
+      if (!book.chapters[chapter]) return res.status(404).json({ error: 'Chapter not found' });
+      const total = scriptOf(book.chapters[chapter]).sentences.length;
+      const key = `${book.id}/${voice}/${chapter}`;
+      if (method === 'post') downloads.start(key, total, index => ensureSentence(book.id, voice, chapter, index, 'low'));
+      if (method === 'delete') await downloads.stop(key);
+      const status = await downloads.status(key, total, async index => Boolean(await cachedSentence(book.id, voice, chapter, index)));
+      res.status(method === 'post' && status.state === 'downloading' ? 202 : 200).json(status);
+    }));
+  }
 
   // Loads the model in the background so the first Play doesn't wait for it.
   app.post('/api/focus/engine/start', (_req, res) => {

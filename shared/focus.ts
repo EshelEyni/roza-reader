@@ -7,6 +7,13 @@ export interface FocusChapter {
   paragraphs: string[];
 }
 
+export interface ChapterDownload {
+  state: 'missing' | 'partial' | 'downloading' | 'ready' | 'error';
+  completed: number;
+  total: number;
+  error?: string;
+}
+
 /** Where the listener stopped: a chapter and a word inside it. */
 export interface ReadingPosition {
   chapter: number;

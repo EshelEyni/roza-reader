@@ -10,6 +10,7 @@ import { LIBRARY_PATH } from './paths';
 import Player from './Player';
 import { useDismiss } from './usePopover';
 import VoiceDialog from './VoiceDialog';
+import OfflineChapter from './OfflineChapter';
 
 // The spoken sentence may sit anywhere in this band of the view before the page scrolls;
 // then it moves to about a third from the top, so the page moves rarely and calmly.
@@ -51,7 +52,7 @@ export default function Reader({ book }: { book: FocusBook }) {
 function ReaderView({ book }: { book: FocusBook }) {
   const { settings } = useLibrary();
   const { chapterIndex, narration, goToChapter: playChapter } = useFocusPlayer();
-  const [dialog, setDialog] = useState<'voice' | 'export' | null>(null);
+  const [dialog, setDialog] = useState<'voice' | 'export' | 'offline' | null>(null);
   const [isContentsOpen, setIsContentsOpen] = useState(false);
   const contentsRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -150,6 +151,9 @@ function ReaderView({ book }: { book: FocusBook }) {
         </div>
 
         <div className="focus-reader-tools">
+          <OfflineChapter key={`${book.id}/${chapterIndex}/${voice.id}`} bookId={book.id} chapter={chapterIndex} title={chapter.title} voice={voice}
+            isOpen={dialog === 'offline'} onOpen={() => setDialog('offline')} onClose={() => setDialog(null)}
+            onPlay={() => { if (!narration.isPlaying) narration.togglePlay(); }} />
           <div className="focus-popover-anchor" ref={contentsRef}>
             <button type="button" onClick={() => setIsContentsOpen(!isContentsOpen)} aria-expanded={isContentsOpen}>
               <ListIcon />
