@@ -1,0 +1,463 @@
+/* Focus: EPUB audiobook reader. Built only from the theme tokens, so every theme works. */
+
+.focus-library,
+.focus-reader {
+  --focus-serif: "Iowan Old Style", "Charter", "Georgia", "Times New Roman", serif;
+  position: relative;
+  height: 100%;
+}
+
+/* Library */
+
+.focus-library { overflow-y: auto; }
+
+.focus-library-inner { max-width: 1120px; margin: 0 auto; padding: 40px 48px 64px; }
+
+.focus-library-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.focus-library-head h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.focus-subtitle { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); }
+.focus-library-head .primary { padding: 9px 16px; font-size: 13.5px; }
+
+.focus-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 10px 12px 10px 16px;
+  font-size: 13.5px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+}
+
+.focus-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 28px 22px; }
+
+.focus-book {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+
+.focus-book:hover, .focus-book:focus-visible { transform: translateY(-2px); border-color: var(--border-strong); box-shadow: var(--shadow-lg); outline: none; }
+
+.focus-cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  aspect-ratio: 2 / 3;
+  padding: 18px 16px 18px 22px;
+  overflow: hidden;
+  color: #fff;
+  border-radius: 6px 10px 10px 6px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.focus-cover-spine {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 8px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.28), rgba(255, 255, 255, 0.12) 60%, transparent);
+}
+
+.focus-cover-title { font-family: var(--focus-serif); font-size: 19px; font-weight: 600; line-height: 1.2; text-wrap: balance; }
+.focus-cover-author { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+
+.focus-book-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0 2px; }
+.focus-book-info h3 { margin: 0; overflow: hidden; font-size: 14.5px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.focus-book-author { margin: 0; font-size: 13px; color: var(--muted); }
+.focus-book-meta { margin: 0; font-size: 12px; color: var(--muted); }
+
+.focus-meter { height: 4px; margin: 8px 0 2px; overflow: hidden; background: var(--panel-hover); border-radius: 99px; }
+.focus-meter span { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width 0.2s; }
+.focus-meter.large { height: 8px; margin: 0; }
+
+.focus-book-actions { display: flex; gap: 6px; margin-top: auto; }
+.focus-book-actions .primary { flex: 1; }
+
+.focus-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 72px 24px;
+  text-align: center;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 18px;
+}
+
+.focus-empty-icon { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 8px; color: var(--accent); background: var(--accent-soft); border-radius: 50%; }
+.focus-empty-icon svg { width: 28px; height: 28px; }
+.focus-empty h2 { margin: 0; font-size: 19px; font-weight: 600; }
+.focus-empty p { max-width: 360px; margin: 0 0 12px; color: var(--muted); }
+.focus-empty .primary { padding: 9px 16px; font-size: 13.5px; }
+
+.focus-drop-overlay {
+  position: absolute;
+  inset: 12px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 2px dashed var(--accent);
+  border-radius: 20px;
+  pointer-events: none;
+}
+
+.focus-drop-overlay svg { width: 32px; height: 32px; }
+
+/* Engine status and notices */
+
+.focus-engine { display: inline-flex; align-items: center; gap: 6px; }
+.focus-engine-dot { width: 7px; height: 7px; background: var(--muted); border-radius: 50%; }
+.focus-engine.ready .focus-engine-dot { background: var(--success); }
+.focus-engine.loading .focus-engine-dot { background: var(--accent); animation: focus-pulse 1s ease-in-out infinite; }
+.focus-engine.error .focus-engine-dot, .focus-engine.missing .focus-engine-dot { background: var(--danger); }
+
+.focus-notice.error-notice { background: var(--danger-soft); border-color: var(--danger); }
+
+.focus-cover.image { padding: 0; background: var(--panel-hover); }
+.focus-cover.image img { width: 100%; height: 100%; object-fit: cover; }
+
+@keyframes focus-pulse { 50% { opacity: 0.35; } }
+@keyframes focus-spin { to { transform: rotate(360deg); } }
+
+/* Reader */
+
+.focus-reader-loading { display: grid; place-items: center; color: var(--muted); }
+
+.focus-reader { display: flex; flex-direction: column; background: var(--bg); }
+
+.focus-reader-bar {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.focus-back { justify-self: start; text-decoration: none; }
+.focus-reader-titles { display: flex; flex-direction: column; align-items: center; min-width: 0; text-align: center; }
+.focus-reader-book, .focus-reader-chapter { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.focus-reader-book { font-size: 13.5px; font-weight: 600; }
+.focus-reader-chapter { font-size: 12px; color: var(--muted); }
+.focus-reader-tools { display: flex; justify-self: end; gap: 8px; }
+
+.focus-font-size { display: flex; }
+.focus-font-size button { font-family: var(--focus-serif); font-size: 14px; }
+.focus-font-size button:first-child { border-radius: 8px 0 0 8px; }
+.focus-font-size button:last-child { margin-left: -1px; font-size: 17px; border-radius: 0 8px 8px 0; }
+.focus-font-size sup { font-family: "Inter", sans-serif; font-size: 10px; }
+
+.focus-reader-progress { height: 2px; background: var(--border); }
+.focus-reader-progress span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
+
+.focus-reader-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; scrollbar-gutter: stable; }
+
+.focus-text {
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 56px 32px 48px;
+  font-family: var(--focus-serif);
+  line-height: 1.75;
+  color: var(--text);
+}
+
+.focus-kicker { margin: 0 0 6px; font-family: "Inter", sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.focus-text h1 { margin: 0 0 1.4em; font-size: 1.7em; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+.focus-text p { margin: 0 0 1.15em; text-wrap: pretty; }
+
+.focus-sentence {
+  border-radius: 4px;
+  cursor: pointer;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-color 0.25s;
+}
+
+.focus-sentence:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+/* Narration: the sentence gets a soft wash, the spoken word a strong mark inside it. */
+.focus-sentence.current {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: 0 0 0 0.12em color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.focus-word.current {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: 3px;
+  /* A shadow widens the mark without touching the layout, so the text never shifts. */
+  box-shadow: 0 0 0 0.12em var(--accent);
+}
+
+.focus-chapter-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 3em; padding-top: 24px; font-family: "Inter", sans-serif; border-top: 1px solid var(--border); }
+
+/* Popovers (contents, speed) */
+
+.focus-popover-anchor { position: relative; }
+
+.focus-popover {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+.focus-popover button {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  text-align: left;
+  white-space: normal;
+  background: none;
+  border-color: transparent;
+}
+
+.focus-popover button:hover { background: var(--panel-hover); border-color: transparent; }
+.focus-popover button.active { color: var(--accent); background: var(--accent-soft); }
+
+.focus-popover-label { margin: 4px 10px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+.focus-contents { top: calc(100% + 6px); right: 0; width: 280px; }
+.focus-contents { max-height: min(60vh, 520px); overflow-y: auto; }
+.focus-contents-number { min-width: 18px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.focus-shortcuts { margin: 6px 10px 4px; padding-top: 8px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--border); }
+
+.focus-speed-menu { right: 0; bottom: calc(100% + 8px); min-width: 140px; }
+.focus-speed-menu button { justify-content: space-between; }
+
+/* Player */
+
+.focus-player {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 24px 18px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.focus-timeline { display: flex; align-items: center; gap: 12px; max-width: 760px; width: 100%; margin: 0 auto; }
+.focus-time { min-width: 48px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.focus-time:last-child { text-align: right; }
+
+.focus-seek {
+  flex: 1;
+  height: 6px;
+  margin: 0;
+  appearance: none;
+  background: linear-gradient(90deg, var(--accent) var(--fill), var(--border) var(--fill));
+  border-radius: 99px;
+  cursor: pointer;
+}
+
+.focus-seek::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  appearance: none;
+  background: var(--accent);
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+
+.focus-seek:hover::-webkit-slider-thumb { transform: scale(1.2); }
+
+.focus-controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
+.focus-controls-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.focus-controls-side.end { justify-content: flex-end; }
+
+.focus-transport { display: flex; align-items: center; gap: 10px; }
+
+.focus-round { width: 40px; height: 40px; padding: 0; color: var(--text); background: none; border-color: transparent; border-radius: 50%; }
+.focus-round:hover { background: var(--panel-hover); border-color: transparent; }
+.focus-round svg { width: 18px; height: 18px; }
+
+.focus-play {
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.focus-play:hover { background: var(--accent-hover); border-color: var(--accent-hover); transform: scale(1.05); }
+.focus-play:active { transform: scale(0.97); }
+.focus-play svg { width: 26px; height: 26px; }
+.focus-play[aria-pressed="false"] svg { margin-left: 3px; }
+.focus-play { position: relative; }
+.focus-play.loading::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: focus-spin 0.9s linear infinite;
+}
+
+.focus-player-error { max-width: 760px; width: 100%; margin: 0 auto; padding: 8px 12px; font-size: 13px; color: var(--danger); background: var(--danger-soft); border-radius: 8px; }
+
+.focus-voice-button { gap: 10px; min-width: 0; padding: 6px 12px 6px 10px; background: none; border-radius: 12px; }
+.focus-voice-button svg { width: 18px; height: 18px; color: var(--accent); }
+.focus-voice-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; text-align: left; }
+.focus-voice-name { font-size: 13px; font-weight: 600; }
+.focus-voice-lang { overflow: hidden; font-size: 11.5px; font-weight: 400; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); }
+.focus-voice-lang code { font-family: var(--mono); font-size: 11px; }
+
+.focus-speed { min-width: 54px; height: 32px; font-size: 13px; font-variant-numeric: tabular-nums; border-radius: 99px; }
+
+/* Modals */
+
+.focus-modal { display: flex; flex-direction: column; gap: 16px; width: min(600px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+.focus-modal h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.focus-modal .modal-meta { margin-top: -10px; }
+
+.focus-voice-list { display: flex; flex-direction: column; gap: 14px; }
+.focus-voice-list .focus-popover-label { margin: 0 0 8px; }
+.focus-voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+
+.focus-voice-option { position: relative; justify-content: flex-start; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: 12px; }
+.focus-voice-option.selected { background: var(--accent-soft); border-color: var(--accent); }
+.focus-voice-option { display: flex; align-items: center; cursor: pointer; border: 1px solid var(--border); }
+.focus-voice-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.focus-voice-avatar { flex-shrink: 0; width: 32px; height: 32px; padding: 0; color: var(--accent); background: var(--accent-soft); border: none; border-radius: 50%; }
+.focus-voice-avatar:hover { color: var(--on-accent); background: var(--accent); border: none; }
+.focus-voice-avatar svg { width: 13px; height: 13px; }
+.focus-voice-avatar.playing { color: var(--on-accent); background: var(--accent); }
+.focus-voice-avatar.loading { animation: focus-pulse 1s ease-in-out infinite; }
+.focus-voice-check { position: absolute; top: 8px; right: 8px; color: var(--accent); }
+
+.focus-fieldset { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: none; }
+.focus-fieldset legend { margin-bottom: 8px; padding: 0; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.focus-fieldset:disabled { opacity: 0.6; }
+
+.focus-choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.focus-choice-grid.three { grid-template-columns: repeat(3, 1fr); }
+
+.focus-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.focus-choice:hover { border-color: var(--border-strong); }
+.focus-choice.selected { background: var(--accent-soft); border-color: var(--accent); }
+.focus-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.focus-choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.focus-choice-label { font-size: 13.5px; font-weight: 600; }
+.focus-choice-detail { font-size: 12px; color: var(--muted); }
+
+.focus-folder { display: flex; align-items: center; gap: 10px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; }
+.focus-folder svg { color: var(--muted); }
+.focus-folder { padding: 6px 6px 6px 12px; }
+.focus-folder-path { flex: 1; min-width: 0; overflow: hidden; font-family: var(--mono); font-size: 13px; white-space: nowrap; text-overflow: ellipsis; }
+.focus-file-preview { margin: 0; overflow: hidden; font-family: var(--mono); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); }
+
+.focus-export-progress { display: flex; flex-direction: column; gap: 8px; padding: 14px; background: var(--panel-hover); border-radius: 12px; }
+.focus-export-status { display: flex; justify-content: space-between; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* Header player: keeps narration within reach on every tab */
+
+.focus-mini {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 360px;
+  margin-left: auto;
+  padding: 3px 6px 3px 3px;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.focus-mini + .settings { margin-left: 12px; }
+
+button.focus-mini-book { justify-content: flex-start; gap: 8px; min-width: 0; padding: 2px 8px 2px 2px; text-align: left; background: none; border: none; border-radius: 9px; }
+button.focus-mini-book:hover { background: var(--panel-hover); }
+.focus-mini-cover { flex-shrink: 0; width: 22px; height: 32px; object-fit: cover; border-radius: 3px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+.focus-mini-text { display: flex; flex-direction: column; min-width: 0; }
+.focus-mini-title, .focus-mini-chapter { max-width: 180px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.focus-mini-title { font-size: 12.5px; font-weight: 600; }
+.focus-mini-chapter { font-size: 11px; font-weight: 400; color: var(--muted); }
+
+button.focus-mini-control { width: 28px; height: 28px; padding: 0; color: var(--text); background: none; border: none; border-radius: 50%; }
+button.focus-mini-control:hover { background: var(--panel-hover); }
+.focus-mini-control svg { width: 13px; height: 13px; }
+
+button.focus-mini-play { width: 30px; height: 30px; padding: 0; color: var(--on-accent); background: var(--accent); border: none; border-radius: 50%; }
+button.focus-mini-play:hover { background: var(--accent-hover); }
+.focus-mini-play svg { width: 13px; height: 13px; }
+.focus-mini-play[aria-pressed="false"] svg { margin-left: 2px; }
+.focus-mini-play.loading { animation: focus-pulse 1s ease-in-out infinite; }
+
+.focus-mini-progress { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--accent); transition: width 0.3s; }
+
+@media (max-width: 1100px) {
+  .focus-mini-text { display: none; }
+}
+
+/* Narrow windows */
+
+@media (max-width: 760px) {
+  .focus-library-inner { padding: 24px 16px 48px; }
+  .focus-library-head { flex-direction: column; align-items: stretch; }
+  .focus-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 14px; }
+
+  .focus-reader-bar { grid-template-columns: auto 1fr; padding: 10px 16px; }
+  .focus-reader-titles { align-items: flex-end; text-align: right; }
+  .focus-reader-tools { grid-column: 1 / -1; justify-self: stretch; justify-content: space-between; }
+  .focus-text { padding: 32px 16px; }
+
+  /* The app scrolls as one page here, so the player sticks to the bottom instead. */
+  .focus-reader-scroll { overflow: visible; }
+  .focus-player { position: sticky; bottom: 0; z-index: 3; padding: 12px 16px 14px; }
+  .focus-controls { grid-template-columns: 1fr auto; }
+  .focus-transport { grid-column: 1 / -1; grid-row: 1; justify-content: center; }
+  .focus-voice-lang { display: none; }
+  .focus-choice-grid, .focus-choice-grid.three { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-book, .focus-play, .focus-sentence, .focus-meter span { transition: none; }
+  .focus-engine-dot, .focus-voice-avatar.loading, .focus-play.loading::after { animation: none; }
+}

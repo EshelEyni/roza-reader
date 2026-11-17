@@ -1,0 +1,12 @@
+node_modules
+client/dist
+dist-electron
+release
+data/*.tmp
+data/*.json
+data/focus/
+kokoro/.venv/
+kokoro/__pycache__/
+release-focus
+
+assets/*.icns
