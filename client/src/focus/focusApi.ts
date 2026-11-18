@@ -1,4 +1,5 @@
 import type {
+  BookDownload,
   ChapterDownload,
   EngineStatus,
   ExportJob,
@@ -10,6 +11,9 @@ import type {
   SentenceAudio,
 } from '../../../shared/focus';
 import { RequestError, request } from '../api';
+
+export const bookDownload = (bookId: string, voice: string, method: 'GET' | 'POST' | 'DELETE' = 'GET') =>
+  request<BookDownload>(`/api/focus/books/${bookId}/download?voice=${encodeURIComponent(voice)}`, { method });
 
 export const chapterDownload = (bookId: string, chapter: number, voice: string, method: 'GET' | 'POST' | 'DELETE' = 'GET') =>
   request<ChapterDownload>(`/api/focus/books/${bookId}/chapters/${chapter}/download?voice=${encodeURIComponent(voice)}`, { method });

@@ -7,6 +7,7 @@ The first line it prints is {"event": "ready"} once the model is loaded. Logs go
 """
 
 import json
+import os
 import sys
 import warnings
 import ctypes
@@ -15,7 +16,15 @@ warnings.filterwarnings("ignore")
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
+import torch  # noqa: E402
 from kokoro import KModel, KPipeline  # noqa: E402
+
+# Speech is made while the user reads, and a whole book can take half an hour. With every core
+# busy the computer slows down and audio can stutter, so speech is made gently in the background:
+# a few threads (still ~16x faster than real time on an M4 Pro) at a low priority.
+torch.set_num_threads(4)
+if hasattr(os, "nice"):
+    os.nice(10)
 
 # eSpeak's Windows C API reads narrow filesystem paths. phonemizer resolves
 # paths back to their Unicode form; convert at the C API boundary so Windows

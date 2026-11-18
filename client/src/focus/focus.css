@@ -467,3 +467,6 @@ button.focus-mini-play:hover { background: var(--accent-hover); }
   .focus-book, .focus-play, .focus-sentence, .focus-meter span { transition: none; }
   .focus-engine-dot, .focus-voice-avatar.loading, .focus-play.loading::after { animation: none; }
 }
+
+.focus-offline-book { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; padding-top: 16px; border-top: 1px solid var(--border); }
+.focus-offline-book h3 { margin: 0; font-size: 15px; font-weight: 600; }

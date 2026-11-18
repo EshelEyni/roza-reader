@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import express, { type Express } from 'express';
@@ -234,6 +234,7 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
     await downloads.stopBook(id);
     await updateLibrary((current) => ({ next: { ...current, books: current.books.filter((book) => book.id !== id) }, result: null }));
     chapterCache.delete(id);
+    chapterSizesCache.delete(id);
     await rm(bookDir(id), { recursive: true, force: true });
     await rm(path.join(audioDir, id), { recursive: true, force: true });
     res.status(204).end();
@@ -300,6 +301,43 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
       if (method === 'post') downloads.start(key, total, index => ensureSentence(book.id, voice, chapter, index, 'low'));
       if (method === 'delete') await downloads.stop(key);
       const status = await downloads.status(key, total, async index => Boolean(await cachedSentence(book.id, voice, chapter, index)));
+      res.status(method === 'post' && status.state === 'downloading' ? 202 : 200).json(status);
+    }));
+  }
+
+  // Sentence counts per chapter never change for a book, so they are worked out once.
+  const chapterSizesCache = new Map<string, number[]>();
+  const chapterSizes = (book: FocusBook) => {
+    const cached = chapterSizesCache.get(book.id);
+    if (cached) return cached;
+    const sizes = book.chapters.map((chapter) => scriptOf(chapter).sentences.length);
+    chapterSizesCache.set(book.id, sizes);
+    return sizes;
+  };
+
+  // Counts saved sentences per chapter from one folder listing, so polling the whole book stays cheap.
+  const savedPerChapter = async (bookId: string, voice: string, sizes: number[]) => {
+    const names = new Set(await readdir(path.join(audioDir, bookId, voice)).catch(() => [] as string[]));
+    return sizes.map((size, chapter) => {
+      let saved = 0;
+      for (let sentence = 0; sentence < size; sentence++) {
+        if (names.has(`${chapter}-${sentence}.json`) && names.has(`${chapter}-${sentence}.wav`)) saved += 1;
+      }
+      return saved;
+    });
+  };
+
+  for (const method of ['get', 'post', 'delete'] as const) {
+    app[method]('/api/focus/books/:id/download', route(async (req, res) => {
+      const voice = String(req.query.voice ?? '');
+      if (!ID_PATTERN.test(req.params.id) || !isVoiceId(voice)) return res.status(400).json({ error: 'Send a valid book and voice' });
+      const book = await loadBook(req.params.id);
+      if (!book) return res.status(404).json({ error: 'Book not found' });
+      const sizes = chapterSizes(book);
+      const key = `${book.id}/${voice}`;
+      if (method === 'post') downloads.startBook(key, sizes, (chapter, sentence) => ensureSentence(book.id, voice, chapter, sentence, 'low'));
+      if (method === 'delete') await downloads.stopBookDownload(key);
+      const status = downloads.bookStatus(key, sizes, await savedPerChapter(book.id, voice, sizes));
       res.status(method === 'post' && status.state === 'downloading' ? 202 : 200).json(status);
     }));
   }

@@ -14,6 +14,18 @@ export interface ChapterDownload {
   error?: string;
 }
 
+/** Saving every chapter of a book, one chapter after another. */
+export interface BookDownload {
+  state: 'missing' | 'partial' | 'downloading' | 'ready' | 'error';
+  completed: number;
+  total: number;
+  chaptersReady: number;
+  chapters: number;
+  /** The chapter being saved while downloading (0-based). */
+  chapter?: number;
+  error?: string;
+}
+
 /** Where the listener stopped: a chapter and a word inside it. */
 export interface ReadingPosition {
   chapter: number;
