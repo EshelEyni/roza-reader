@@ -12,6 +12,8 @@ import {
   FONT_SIZES,
   PLAYBACK_SPEEDS,
   isVoiceId,
+  isVolume,
+  pacingOf,
   scriptOf,
   type ExportRequest,
   type FocusBook,
@@ -51,7 +53,7 @@ const COVER_EXTENSIONS: Record<string, string> = { 'image/jpeg': 'jpg', 'image/p
 const ID_PATTERN = /^[\w-]{1,64}$/;
 
 // Bump when the way clips are made changes; older cached audio is then cleared once.
-const AUDIO_CACHE_VERSION = '2';
+const AUDIO_CACHE_VERSION = '3';
 
 const PREVIEW_TEXT = (name: string) => `Hi, I'm ${name}. I'd be glad to read this book to you, one chapter at a time.`;
 
@@ -138,11 +140,13 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
 
     const making = (async () => {
       const chapters = await loadChapters(bookId);
-      const sentence = scriptOf(chapters[chapterIndex]).sentences[sentenceIndex];
+      const script = scriptOf(chapters[chapterIndex]);
+      const sentence = script.sentences[sentenceIndex];
       if (!sentence) throw new Error('No such sentence.');
       const words = sentence.words.map((word) => word.text);
+      const { pause, speed } = pacingOf(script, sentenceIndex);
       await mkdir(folder, { recursive: true });
-      const result = await kokoro.synthesize({ text: words.join(' '), words, voice, out: wavFile }, priority);
+      const result = await kokoro.synthesize({ text: words.join(' '), words, voice, out: wavFile, pause, speed }, priority);
       const timing = { duration: result.duration, words: result.words.map(([start, end]) => ({ start, end })) };
       await writeFile(timingFile, JSON.stringify(timing));
       return { url, ...timing };
@@ -257,13 +261,14 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
   }));
 
   app.put('/api/focus/settings', route(async (req, res) => {
-    const { voiceId, speed, exportFolder, lastBookId, theme, fontSize } = (req.body ?? {}) as Partial<FocusSettings>;
+    const { voiceId, speed, exportFolder, lastBookId, theme, fontSize, volume } = (req.body ?? {}) as Partial<FocusSettings>;
     const isValid =
       (theme === undefined || THEME_IDS.includes(theme)) &&
       (fontSize === undefined || FONT_SIZES.includes(fontSize)) &&
       (lastBookId === undefined || (typeof lastBookId === 'string' && ID_PATTERN.test(lastBookId))) &&
       (voiceId === undefined || isVoiceId(voiceId)) &&
       (speed === undefined || PLAYBACK_SPEEDS.includes(speed)) &&
+      (volume === undefined || isVolume(volume)) &&
       (exportFolder === undefined || (typeof exportFolder === 'string' && exportFolder.trim() !== ''));
     if (!isValid) return res.status(400).json({ error: 'Invalid RozaReader settings' });
 
@@ -276,6 +281,8 @@ export function registerFocus(app: Express, dataDir: string, desktop?: DesktopAc
         ...(lastBookId && { lastBookId }),
         ...(theme && { theme }),
         ...(fontSize && { fontSize }),
+        // A volume of 0 (muted) is a real value, so check for undefined.
+        ...(volume !== undefined && { volume }),
       };
       return { next: { ...current, settings: next }, result: next };
     });

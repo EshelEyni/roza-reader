@@ -13,7 +13,7 @@ Read this first. It explains the app, how to work on it, and where things stand.
 ## 2. Where things are
 
 1. Code: `~/qbiq/roza-reader`. Read `README.md` too.
-2. GitHub: `EshelEyni/roza-reader` (private). Branch: `main` only. Latest: `bdaa100`.
+2. GitHub: `EshelEyni/roza-reader` (private). Branch: `main` only.
 3. Installed app: `/Applications/RozaReader.app`.
 4. The packaged app's folder: `~/Library/Application Support/RozaReader/`
    1. `focus/`: the **live library** (books, positions, settings, cached audio). Treat it as user data.
@@ -52,10 +52,16 @@ Read this first. It explains the app, how to work on it, and where things stand.
 1. **One Kokoro process** (`server/focus/kokoro.ts`) makes **one sentence at a time**. Requests wait in two lines: `high` (what the listener is waiting for) and `low` (read-ahead, downloads, exports). High always goes first.
 2. `service.py` runs Kokoro with **4 threads at low priority** (`nice 10`). That's still about 16× faster than real time on this M4 Pro (10 threads were 18.5×). This keeps the Mac responsive and the audio from stuttering. Don't remove it.
 3. Each sentence clip is trimmed to a short breath (about 0.04 s before, 0.16 s after). Word times are shifted to match.
-4. Clips are cached as `<chapter>-<sentence>.wav` + `.json` under `focus/audio/<bookId>/<voice>/`. An audio cache `VERSION` file clears old clips when the format changes.
+   Then `pacingOf` (`shared/focus.ts`) adds silence after it from its place in the text: 0.35 s normal, longer for `?`/`!`, `…`, paragraph ends, speaker changes, scene breaks and chapter ends. Short narration lines are said at 0.92 speed. Kokoro has no emotion control, so this is how the reading gets its rhythm.
+4. Clips are cached as `<chapter>-<sentence>.wav` + `.json` under `focus/audio/<bookId>/<voice>/`. An audio cache `VERSION` file (now `3`) clears old clips when the format changes. That also deletes offline downloads.
 5. Starting several downloads at once is **not** faster. They all share the one line.
 
-## 7. Offline audio
+## 7. Voices and volume
+
+1. The picker lists all 28 English Kokoro voices, with Gender and Nationality filters (`VoiceDialog.tsx`).
+2. The player has a volume slider and mute. Volume is saved in settings; settings saves are batched for 300 ms.
+
+## 8. Offline audio
 
 1. **Save offline** in the reader's top bar opens the dialog (`client/src/focus/OfflineChapter.tsx`).
 2. **Chapter:** saves one chapter's audio and word times.
@@ -67,7 +73,7 @@ Read this first. It explains the app, how to work on it, and where things stand.
    5. Downloads are **per voice**.
 4. The user's current book: 95 chapters, about 84,000 words, about 8.5 hours of speech. A whole-book save should take about 30–60 minutes and 1.5 GB.
 
-## 8. Testing
+## 9. Testing
 
 1. `npm run test:smoke`: fast, uses a temp library, downloads no voices. Passed at `bdaa100`.
 2. `npm run test:speech`, `test:offline`, `test:reader`: real speech or Chrome. See the README.
@@ -77,12 +83,14 @@ Read this first. It explains the app, how to work on it, and where things stand.
 4. In the browser, audio only plays after a **real click** (a script click is blocked). Use the browser tool's click, not `element.click()`, for Play.
 5. The user's Mac is often muted. Verify playback with logs (for example, log each clip's `play`/`ended`), not by ear.
 
-## 9. Open items
+## 10. Open items
 
 1. **Repeated last word bug:** the user heard the end of a sentence's last word repeat several times. The clips and play order were checked and are clean. The likely cause is CPU starvation of audio output while Kokoro worked on every core. The 4-thread, low-priority fix is applied but **not confirmed by ear**. If it comes back, ask whether it also happens on already-cached parts. If it does, the cause is something else.
 2. The whole-book download has been tested on a small book, not yet on the user's real 95-chapter book.
+3. The pacing pauses are not yet confirmed by ear. Tune the numbers in `PAUSE` if they feel too long or short.
+4. Sentence splitting breaks abbreviations ("a.m." becomes two sentences). A fix changes sentence indices, so saved positions and cached clips would need care.
 
-## 10. Gotchas
+## 11. Gotchas
 
 1. The Mac's disk ignores case. `library.ts` and `Library.tsx` would clash. Use different names.
 2. React runs in StrictMode in dev, so effects run twice. Don't change module state during render.

@@ -47,6 +47,8 @@ interface Options {
   script: NarrationScript;
   voice: string;
   speed: number;
+  /** From 0 to 1. */
+  volume: number;
   initialWord: number;
   /** Called after the last sentence. Returning true keeps playing (into the next chapter). */
   onEnd: () => boolean;
@@ -59,7 +61,7 @@ export const EMPTY_SCRIPT: NarrationScript = { paragraphs: [], sentences: [], wo
  * with the word times from the server. Upcoming sentences wait in their own loaded audio
  * elements, so playback flows from one sentence into the next without a gap.
  */
-export function useNarration({ bookId, chapter, script, voice, speed, initialWord, onEnd }: Options) {
+export function useNarration({ bookId, chapter, script, voice, speed, volume, initialWord, onEnd }: Options) {
   const [position, setPosition] = useState({ bookId, chapter, word: initialWord });
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,8 +87,8 @@ export function useNarration({ bookId, chapter, script, voice, speed, initialWor
   const currentKey = keyOf(chapter, sentenceIndex);
 
   // Event handlers read the latest values through this ref.
-  const latest = useRef({ bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, active, voice });
-  latest.current = { bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, active, voice };
+  const latest = useRef({ bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, volume, active, voice });
+  latest.current = { bookId, wordIndex, sentenceIndex, script, onEnd, chapter, speed, volume, active, voice };
   const startRef = useRef<(item: Prepared, key: string, chapter: number, sentence: number, word: number) => Promise<void>>(async () => {});
 
   /** Makes the sentence (or takes it from the cache) and loads it into its own audio element. */
@@ -154,6 +156,7 @@ export function useNarration({ bookId, chapter, script, voice, speed, initialWor
     element.onended = () => handleEndedRef.current();
     element.defaultPlaybackRate = latest.current.speed;
     element.playbackRate = latest.current.speed;
+    element.volume = latest.current.volume;
     // Starting mid-sentence (after a seek) starts at that word.
     const offset = word - latest.current.script.sentences[index].words[0].index;
     element.currentTime = offset > 0 ? (clip.words[offset]?.start ?? 0) : 0;
@@ -169,7 +172,8 @@ export function useNarration({ bookId, chapter, script, voice, speed, initialWor
     if (!element) return;
     element.defaultPlaybackRate = speed;
     element.playbackRate = speed;
-  }, [active, speed]);
+    element.volume = volume;
+  }, [active, speed, volume]);
 
   // Stops everything when the reader closes.
   useEffect(

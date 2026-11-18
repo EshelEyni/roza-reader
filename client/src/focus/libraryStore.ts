@@ -106,7 +106,18 @@ export function savePosition(bookId: string, position: ReadingPosition) {
   pendingSaves.set(bookId, { timer, position });
 }
 
+const SETTINGS_SAVE_DELAY = 300;
+let pendingSettings: Partial<FocusSettings> = {};
+let settingsTimer: number | undefined;
+
+/** Updates the settings at once and saves them shortly after, so a dragged slider sends one save. */
 export function saveSettings(change: Partial<FocusSettings>) {
   setState({ settings: { ...state.settings, ...change } });
-  saveFocusSettings(change).catch(() => {});
+  pendingSettings = { ...pendingSettings, ...change };
+  window.clearTimeout(settingsTimer);
+  settingsTimer = window.setTimeout(() => {
+    const changes = pendingSettings;
+    pendingSettings = {};
+    saveFocusSettings(changes).catch(() => {});
+  }, SETTINGS_SAVE_DELAY);
 }

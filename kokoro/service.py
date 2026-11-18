@@ -1,7 +1,8 @@
 """Kokoro speech service for RozaReader.
 
 Reads one JSON request per line on stdin and answers one JSON line on stdout:
-  request:  {"id": "1", "text": "...", "words": ["Hello,", "world."], "voice": "af_heart", "out": "/abs/file.wav"}
+  request:  {"id": "1", "text": "...", "words": ["Hello,", "world."], "voice": "af_heart", "out": "/abs/file.wav",
+             "pause": 0.75, "speed": 0.95}   (pause and speed are optional)
   response: {"id": "1", "ok": true, "duration": 1.84, "words": [[0.05, 0.41], [0.45, 0.98]]}
 The first line it prints is {"event": "ready"} once the model is loaded. Logs go to stderr.
 """
@@ -140,13 +141,20 @@ def trim_silence(audio, words):
     return audio[start:end], shifted
 
 
+def add_pause(audio, pause):
+    """Lengthens the silence after the words to `pause` seconds. The words keep their times."""
+    extra = int(max(pause - TAIL_SECONDS, 0) * SAMPLE_RATE)
+    return np.concatenate([audio, np.zeros(extra, dtype=audio.dtype)]) if extra else audio
+
+
 def synthesize(request):
     pipeline = pipeline_for(request["voice"])
     chunks = []
     tokens = []
     offset = 0.0
     # The whole sentence is one chunk unless it is very long; timestamps restart per chunk.
-    for result in pipeline(request["text"], voice=request["voice"], speed=1, split_pattern=None):
+    speed = request.get("speed", 1)
+    for result in pipeline(request["text"], voice=request["voice"], speed=speed, split_pattern=None):
         if result.audio is None:
             continue
         audio = result.audio.cpu().numpy() if hasattr(result.audio, "cpu") else np.asarray(result.audio)
@@ -160,6 +168,7 @@ def synthesize(request):
     audio = np.concatenate(chunks) if chunks else np.zeros(int(SAMPLE_RATE * 0.3), dtype=np.float32)
     words = align(request["words"], tokens, len(audio) / SAMPLE_RATE)
     audio, words = trim_silence(audio, words)
+    audio = add_pause(audio, request.get("pause", 0))
     sf.write(request["out"], audio, SAMPLE_RATE)
     return {"duration": round(len(audio) / SAMPLE_RATE, 3), "words": words}
 

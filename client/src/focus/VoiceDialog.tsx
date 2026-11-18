@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FOCUS_VOICES } from '../../../shared/focus';
+import { FOCUS_VOICES, type FocusVoice } from '../../../shared/focus';
 import { CheckIcon } from '../components/icons';
 import { fetchVoicePreview } from './focusApi';
 import { PauseIcon, PlayIcon } from './icons';
@@ -13,11 +13,46 @@ interface Props {
 
 const languages = [...new Set(FOCUS_VOICES.map((voice) => voice.language))];
 
+const ALL = 'All';
+const GENDERS = [ALL, 'Female', 'Male'] as const;
+const NATIONALITIES = [ALL, ...new Set(FOCUS_VOICES.map((voice) => voice.nationality))];
+
+type GenderFilter = (typeof GENDERS)[number];
+
+interface FilterProps<T extends string> {
+  label: string;
+  options: readonly T[];
+  value: T;
+  onChange: (value: T) => void;
+}
+
+function FilterChips<T extends string>({ label, options, value, onChange }: FilterProps<T>) {
+  return (
+    <div className="focus-voice-filter" role="radiogroup" aria-label={label}>
+      <span className="focus-popover-label">{label}</span>
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={option === value}
+          className={option === value ? 'active' : ''}
+          onClick={() => onChange(option)}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Picks a Kokoro voice, with a short spoken preview of each. The choice only applies on Apply. */
 export default function VoiceDialog({ selectedId, onApply, onClose }: Props) {
   const [choice, setChoice] = useState(selectedId);
   const [preview, setPreview] = useState<{ voice: string; state: 'loading' | 'playing' } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [gender, setGender] = useState<GenderFilter>(ALL);
+  const [nationality, setNationality] = useState<string>(ALL);
   const audio = useMemo(() => new Audio(), []);
   useDismiss(true, onClose);
 
@@ -46,6 +81,14 @@ export default function VoiceDialog({ selectedId, onApply, onClose }: Props) {
     }
   };
 
+  const matchesFilters = (voice: FocusVoice) => {
+    const isGenderMatch = gender === ALL || voice.gender === gender;
+    const isNationalityMatch = nationality === ALL || voice.nationality === nationality;
+    return isGenderMatch && isNationalityMatch;
+  };
+  const shownVoices = FOCUS_VOICES.filter(matchesFilters);
+  const shownLanguages = languages.filter((language) => shownVoices.some((voice) => voice.language === language));
+
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal focus-modal" role="dialog" aria-labelledby="focus-voice-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -53,12 +96,18 @@ export default function VoiceDialog({ selectedId, onApply, onClose }: Props) {
         <p className="modal-meta">Kokoro runs on this Mac. Press play to hear a voice; the first preview takes a few seconds.</p>
         {error && <div className="error">{error}</div>}
 
+        <div className="focus-voice-filters">
+          <FilterChips label="Gender" options={GENDERS} value={gender} onChange={setGender} />
+          <FilterChips label="Nationality" options={NATIONALITIES} value={nationality} onChange={setNationality} />
+        </div>
+
         <div className="focus-voice-list">
-          {languages.map((language) => (
+          {shownLanguages.length === 0 && <p className="modal-meta">No voices match these filters.</p>}
+          {shownLanguages.map((language) => (
             <section key={language} role="radiogroup" aria-label={language}>
               <p className="focus-popover-label">{language}</p>
               <div className="focus-voice-grid">
-                {FOCUS_VOICES.filter((voice) => voice.language === language).map((voice) => {
+                {shownVoices.filter((voice) => voice.language === language).map((voice) => {
                   const isSelected = voice.id === choice;
                   const previewState = preview?.voice === voice.id ? preview.state : null;
                   return (

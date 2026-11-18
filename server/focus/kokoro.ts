@@ -9,6 +9,10 @@ export interface SynthesisRequest {
   words: string[];
   voice: string;
   out: string;
+  /** Seconds of silence after the words. */
+  pause?: number;
+  /** Speaking speed; 1 is normal. */
+  speed?: number;
 }
 
 export interface SynthesisResult {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { scriptOf, type FocusBook } from '../../../shared/focus';
+import { DEFAULT_VOLUME, scriptOf, type FocusBook } from '../../../shared/focus';
 import { fetchFocusBook } from './focusApi';
 import { flushPositions, loadLibrary, saveSettings, savePosition, useLibrary } from './libraryStore';
 import { EMPTY_SCRIPT, useNarration, type Narration } from './narration';
@@ -44,6 +44,7 @@ export function FocusPlayerProvider({ children }: { children: ReactNode }) {
     script,
     voice: settings.voiceId,
     speed: settings.speed,
+    volume: settings.volume ?? DEFAULT_VOLUME,
     initialWord: 0,
     // At the end of a chapter, playback moves on to the next one.
     onEnd: () => {

@@ -9,6 +9,7 @@ import {
   RewindIcon,
   SkipBackIcon,
   SkipForwardIcon,
+  VolumeIcon,
 } from './icons';
 import { PLAYBACK_SPEEDS, secondsPerWord, type FocusVoice, type NarrationScript } from '../../../shared/focus';
 import { formatTime, type Narration } from './narration';
@@ -18,10 +19,12 @@ interface Props {
   narration: Narration;
   script: NarrationScript;
   speed: number;
+  volume: number;
   voice: FocusVoice;
   canGoBack: boolean;
   canGoForward: boolean;
   onSpeedChange: (speed: number) => void;
+  onVolumeChange: (volume: number) => void;
   onPreviousChapter: () => void;
   onNextChapter: () => void;
   onOpenVoices: () => void;
@@ -30,7 +33,10 @@ interface Props {
 
 /** The audiobook player bar. Times are estimates from the word count until the audio exists. */
 export default function Player(props: Props) {
-  const { narration, script, speed, voice, canGoBack, canGoForward } = props;
+  const { narration, script, speed, volume, voice, canGoBack, canGoForward } = props;
+  // The level to return to when unmuting.
+  const lastVolume = useRef(volume || 1);
+  const isMuted = volume === 0;
   const [isSpeedOpen, setIsSpeedOpen] = useState(false);
   const speedRef = useRef<HTMLDivElement>(null);
   useDismiss(isSpeedOpen, () => setIsSpeedOpen(false), speedRef);
@@ -99,6 +105,32 @@ export default function Player(props: Props) {
         </div>
 
         <div className="focus-controls-side end">
+          <div className="focus-volume">
+            <button
+              type="button"
+              className="focus-round"
+              title={isMuted ? 'Unmute' : 'Mute'}
+              onClick={() => props.onVolumeChange(isMuted ? lastVolume.current : 0)}
+            >
+              <VolumeIcon muted={isMuted} />
+            </button>
+            <input
+              type="range"
+              className="focus-seek focus-volume-slider"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                if (next > 0) lastVolume.current = next;
+                props.onVolumeChange(next);
+              }}
+              style={{ '--fill': `${volume * 100}%` } as CSSProperties}
+              aria-label="Volume"
+              title={`Volume ${Math.round(volume * 100)}%`}
+            />
+          </div>
           <div className="focus-popover-anchor" ref={speedRef}>
             <button
               type="button"

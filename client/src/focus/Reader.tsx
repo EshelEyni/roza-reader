@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DEFAULT_FONT_SIZE, FOCUS_VOICES, FONT_SIZES, scriptOf, type FocusBook } from '../../../shared/focus';
+import { DEFAULT_FONT_SIZE, DEFAULT_VOLUME, FOCUS_VOICES, FONT_SIZES, scriptOf, type FocusBook } from '../../../shared/focus';
 import ExportDialog from './ExportDialog';
 import { useFocusPlayer } from './FocusPlayer';
 import { ChevronLeftIcon, ChevronRightIcon, ListIcon } from './icons';
@@ -168,10 +168,12 @@ function ReaderView({ book }: { book: FocusBook }) {
         narration={narration}
         script={script}
         speed={settings.speed}
+        volume={settings.volume ?? DEFAULT_VOLUME}
         voice={voice}
         canGoBack={!isFirstChapter}
         canGoForward={!isLastChapter}
         onSpeedChange={(speed) => saveSettings({ speed })}
+        onVolumeChange={(volume) => saveSettings({ volume })}
         onPreviousChapter={() => goToChapter(chapterIndex - 1)}
         onNextChapter={() => goToChapter(chapterIndex + 1)}
         onOpenVoices={() => setDialog('voice')}
